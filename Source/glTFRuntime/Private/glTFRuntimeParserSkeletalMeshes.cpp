@@ -2392,6 +2392,449 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* Skeletal
 	return AnimSequence;
 }
 
+UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	if (!Skeleton)
+	{
+		return nullptr;
+	}
+
+	TSharedPtr<FJsonObject> JsonAnimationObject = GetJsonObjectFromRootIndex("animations", AnimationIndex);
+	if (!JsonAnimationObject)
+	{
+		AddError("LoadNodeSkeletalAnimation()", FString::Printf(TEXT("Unable to find animation %d"), AnimationIndex));
+		return nullptr;
+	}
+
+	float Duration;
+	TMap<FString, FRawAnimSequenceTrack> Tracks;
+
+	TMap<FName, TArray<TPair<float, float>>> MorphTargetCurves;
+	if (!LoadSkeletalAnimation_Internal(JsonAnimationObject.ToSharedRef(), Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig, [](const FglTFRuntimeNode& Node) -> bool { return true; }))
+	{
+		return nullptr;
+	}
+
+	int32 NumFrames = FMath::Max<int32>(Duration * SkeletalAnimationConfig.FramesPerSecond, 1);
+	UAnimSequence* AnimSequence = NewObject<UAnimSequence>(GetTransientPackage(), NAME_None, RF_Public);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	//AnimSequence->SetSkeleton(SkeletalMesh->GetSkeleton());
+	AnimSequence->SetSkeleton(Skeleton);
+#else
+	//AnimSequence->SetSkeleton(SkeletalMesh->Skeleton);
+	AnimSequence->SetSkeleton(Skeleton);
+#endif
+	//AnimSequence->SetPreviewMesh(SkeletalMesh);
+#if ENGINE_MAJOR_VERSION > 4
+#if WITH_EDITOR
+	FFrameRate FrameRate(SkeletalAnimationConfig.FramesPerSecond, 1);
+
+#if ENGINE_MINOR_VERSION < 2
+	FIntProperty* IntProperty = CastField<FIntProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("NumberOfFrames")));
+	IntProperty->SetPropertyValue_InContainer(AnimSequence->GetDataModel(), NumFrames);
+	FFloatProperty* FloatProperty = CastField<FFloatProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("PlayLength")));
+	FloatProperty->SetPropertyValue_InContainer(AnimSequence->GetDataModel(), Duration);
+	IntProperty = CastField<FIntProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("NumberOfKeys")));
+	IntProperty->SetPropertyValue_InContainer(AnimSequence->GetDataModel(), NumFrames);
+
+
+	FStructProperty* StructProperty = CastField<FStructProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("FrameRate")));
+	FFrameRate* FrameRatePtr = StructProperty->ContainerPtrToValuePtr<FFrameRate>(AnimSequence->GetDataModel());
+	*FrameRatePtr = FrameRate;
+#endif
+#else
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+#if ENGINE_MINOR_VERSION >= 2
+		FFloatProperty* FloatProperty = CastField<FFloatProperty>(UAnimSequence::StaticClass()->FindPropertyByName(TEXT("SequenceLength")));
+	FloatProperty->SetPropertyValue_InContainer(AnimSequence, Duration);
+#else
+		AnimSequence->SequenceLength = Duration;
+#endif
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+#else
+	AnimSequence->SetRawNumberOfFrame(NumFrames);
+	AnimSequence->SequenceLength = Duration;
+#endif
+	AnimSequence->bEnableRootMotion = SkeletalAnimationConfig.bRootMotion;
+	AnimSequence->RootMotionRootLock = SkeletalAnimationConfig.RootMotionRootLock;
+	const TArray<FTransform> BonesPoses = AnimSequence->GetSkeleton()->GetReferenceSkeleton().GetRefBonePose();
+
+#if !WITH_EDITOR
+	UglTFAnimBoneCompressionCodec* CompressionCodec = NewObject<UglTFAnimBoneCompressionCodec>();
+	CompressionCodec->Tracks.AddDefaulted(BonesPoses.Num());
+	AnimSequence->CompressedData.CompressedTrackToSkeletonMapTable.AddDefaulted(BonesPoses.Num());
+	for (int32 BoneIndex = 0; BoneIndex < BonesPoses.Num(); BoneIndex++)
+	{
+		AnimSequence->CompressedData.CompressedTrackToSkeletonMapTable[BoneIndex] = BoneIndex;
+		for (int32 FrameIndex = 0; FrameIndex < NumFrames; FrameIndex++)
+		{
+#if ENGINE_MAJOR_VERSION > 4
+			CompressionCodec->Tracks[BoneIndex].PosKeys.Add(FVector3f(BonesPoses[BoneIndex].GetLocation()));
+			CompressionCodec->Tracks[BoneIndex].RotKeys.Add(FQuat4f(BonesPoses[BoneIndex].GetRotation()));
+			CompressionCodec->Tracks[BoneIndex].ScaleKeys.Add(FVector3f(BonesPoses[BoneIndex].GetScale3D()));
+#else
+			CompressionCodec->Tracks[BoneIndex].PosKeys.Add(BonesPoses[BoneIndex].GetLocation());
+			CompressionCodec->Tracks[BoneIndex].RotKeys.Add(BonesPoses[BoneIndex].GetRotation());
+			CompressionCodec->Tracks[BoneIndex].ScaleKeys.Add(BonesPoses[BoneIndex].GetScale3D());
+#endif
+
+		}
+	}
+#else
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	AnimSequence->GetController().OpenBracket(FText::FromString("glTFRuntime"), false);
+	AnimSequence->GetController().InitializeModel();
+#endif
+#endif
+
+	bool bHasTracks = false;
+	for (TPair<FString, FRawAnimSequenceTrack>& Pair : Tracks)
+	{
+		FName BoneName = FName(Pair.Key);
+		int32 BoneIndex = AnimSequence->GetSkeleton()->GetReferenceSkeleton().FindBoneIndex(BoneName);
+		if (BoneIndex == INDEX_NONE)
+		{
+			AddError("LoadSkeletalAnimation()", FString::Printf(TEXT("Unable to find bone %s"), *Pair.Key));
+			continue;
+		}
+
+		FTransform BoneTransform = BonesPoses[BoneIndex];
+
+		// sanitize curves
+
+		// positions
+		if (Pair.Value.PosKeys.Num() == 0)
+		{
+			for (int32 FrameIndex = 0; FrameIndex < NumFrames; FrameIndex++)
+			{
+#if ENGINE_MAJOR_VERSION > 4
+				Pair.Value.PosKeys.Add(FVector3f(BoneTransform.GetLocation()));
+#else
+				Pair.Value.PosKeys.Add(BoneTransform.GetLocation());
+#endif
+			}
+		}
+		else if (Pair.Value.PosKeys.Num() < NumFrames)
+		{
+#if ENGINE_MAJOR_VERSION > 4
+			FVector3f LastValidPosition = Pair.Value.PosKeys.Last();
+#else
+			FVector LastValidPosition = Pair.Value.PosKeys.Last();
+#endif
+			int32 FirstNewFrame = Pair.Value.PosKeys.Num();
+			for (int32 FrameIndex = FirstNewFrame; FrameIndex < NumFrames; FrameIndex++)
+			{
+				Pair.Value.PosKeys.Add(LastValidPosition);
+			}
+		}
+		else
+		{
+			Pair.Value.PosKeys.RemoveAt(NumFrames, Pair.Value.PosKeys.Num() - NumFrames, true);
+		}
+
+		// rotations
+		if (Pair.Value.RotKeys.Num() == 0)
+		{
+			for (int32 FrameIndex = 0; FrameIndex < NumFrames; FrameIndex++)
+			{
+#if ENGINE_MAJOR_VERSION > 4
+				Pair.Value.RotKeys.Add(FQuat4f(BoneTransform.GetRotation()));
+#else
+				Pair.Value.RotKeys.Add(BoneTransform.GetRotation());
+#endif
+			}
+		}
+		else if (Pair.Value.RotKeys.Num() < NumFrames)
+		{
+#if ENGINE_MAJOR_VERSION > 4
+			FQuat4f LastValidRotation = Pair.Value.RotKeys.Last();
+#else
+			FQuat LastValidRotation = Pair.Value.RotKeys.Last();
+#endif
+			int32 FirstNewFrame = Pair.Value.RotKeys.Num();
+			for (int32 FrameIndex = FirstNewFrame; FrameIndex < NumFrames; FrameIndex++)
+			{
+				Pair.Value.RotKeys.Add(LastValidRotation);
+			}
+		}
+		else
+		{
+			Pair.Value.RotKeys.RemoveAt(NumFrames, Pair.Value.RotKeys.Num() - NumFrames, true);
+		}
+
+		if (Pair.Value.ScaleKeys.Num() == 0)
+		{
+			for (int32 FrameIndex = 0; FrameIndex < NumFrames; FrameIndex++)
+			{
+#if ENGINE_MAJOR_VERSION > 4
+				Pair.Value.ScaleKeys.Add(FVector3f(BoneTransform.GetScale3D()));
+#else
+				Pair.Value.ScaleKeys.Add(BoneTransform.GetScale3D());
+#endif
+			}
+		}
+		else if (Pair.Value.ScaleKeys.Num() < NumFrames)
+		{
+#if ENGINE_MAJOR_VERSION > 4
+			FVector3f LastValidScale = Pair.Value.ScaleKeys.Last();
+#else
+			FVector LastValidScale = Pair.Value.ScaleKeys.Last();
+#endif
+			int32 FirstNewFrame = Pair.Value.ScaleKeys.Num();
+			for (int32 FrameIndex = FirstNewFrame; FrameIndex < NumFrames; FrameIndex++)
+			{
+				Pair.Value.ScaleKeys.Add(LastValidScale);
+			}
+		}
+		else
+		{
+			Pair.Value.ScaleKeys.RemoveAt(NumFrames, Pair.Value.ScaleKeys.Num() - NumFrames, true);
+		}
+
+
+		if (BoneIndex == 0)
+		{
+			if (SkeletalAnimationConfig.RootNodeIndex > INDEX_NONE)
+			{
+				FglTFRuntimeNode AnimRootNode;
+				if (!LoadNode(SkeletalAnimationConfig.RootNodeIndex, AnimRootNode))
+				{
+					return nullptr;
+				}
+
+				for (int32 FrameIndex = 0; FrameIndex < Pair.Value.RotKeys.Num(); FrameIndex++)
+				{
+#if ENGINE_MAJOR_VERSION > 4
+					FVector3f Pos = Pair.Value.PosKeys[FrameIndex];
+					FQuat4d Quat = FQuat4d(Pair.Value.RotKeys[FrameIndex]);
+					FVector3f Scale = Pair.Value.ScaleKeys[FrameIndex];
+					FTransform FrameTransform = FTransform(FQuat(Quat), FVector(Pos), FVector(Scale)) * AnimRootNode.Transform;
+#else
+					FVector Pos = Pair.Value.PosKeys[FrameIndex];
+					FQuat Quat = Pair.Value.RotKeys[FrameIndex];
+					FVector Scale = Pair.Value.ScaleKeys[FrameIndex];
+					FTransform FrameTransform = FTransform(Quat, Pos, Scale) * AnimRootNode.Transform;
+#endif
+
+#if ENGINE_MAJOR_VERSION > 4
+					Pair.Value.PosKeys[FrameIndex] = FVector3f(FrameTransform.GetLocation());
+					Pair.Value.RotKeys[FrameIndex] = FQuat4f(FrameTransform.GetRotation());
+#else
+					Pair.Value.PosKeys[FrameIndex] = FrameTransform.GetLocation();
+					Pair.Value.RotKeys[FrameIndex] = FrameTransform.GetRotation();
+#endif
+
+#if ENGINE_MAJOR_VERSION > 4
+					Pair.Value.ScaleKeys[FrameIndex] = FVector3f(FrameTransform.GetScale3D());
+#else
+					Pair.Value.ScaleKeys[FrameIndex] = FrameTransform.GetScale3D();
+#endif
+				}
+			}
+
+			if (SkeletalAnimationConfig.bRemoveRootMotion)
+			{
+				for (int32 FrameIndex = 0; FrameIndex < Pair.Value.RotKeys.Num(); FrameIndex++)
+				{
+					Pair.Value.PosKeys[FrameIndex] = Pair.Value.PosKeys[0];
+				}
+			}
+		}
+
+
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MINOR_VERSION >= 2
+		AnimSequence->GetController().AddBoneCurve(BoneName, false);
+		AnimSequence->GetController().SetBoneTrackKeys(BoneName, Pair.Value.PosKeys, Pair.Value.RotKeys, Pair.Value.ScaleKeys, false);
+#else
+		TArray<FBoneAnimationTrack>& BoneTracks = const_cast<TArray<FBoneAnimationTrack>&>(AnimSequence->GetDataModel()->GetBoneAnimationTracks());
+		FBoneAnimationTrack BoneTrack;
+		BoneTrack.Name = BoneName;
+		BoneTrack.BoneTreeIndex = BoneIndex;
+		BoneTrack.InternalTrackData = Pair.Value;
+		BoneTracks.Add(BoneTrack);
+#endif
+#else
+		AnimSequence->AddNewRawTrack(BoneName, &Pair.Value);
+#endif
+#else
+		CompressionCodec->Tracks[BoneIndex] = Pair.Value;
+#endif
+		bHasTracks = true;
+	}
+
+	if (SkeletalAnimationConfig.bFillAllCurves)
+	{
+		for (int32 BoneIndex = 0; BoneIndex < BonesPoses.Num(); BoneIndex++)
+		{
+			const FString BoneName = AnimSequence->GetSkeleton()->GetReferenceSkeleton().GetBoneName(BoneIndex).ToString();
+			if (!Tracks.Contains(BoneName))
+			{
+				FRawAnimSequenceTrack NewTrack;
+				FglTFRuntimeNode BoneNode;
+				if (LoadNodeByName(BoneName, BoneNode))
+				{
+					FTransform BoneTransform = BoneNode.Transform;
+
+					for (int32 FrameIndex = 0; FrameIndex < NumFrames; FrameIndex++)
+					{
+#if ENGINE_MAJOR_VERSION > 4
+						NewTrack.PosKeys.Add(FVector3f(BoneTransform.GetLocation()));
+						NewTrack.RotKeys.Add(FQuat4f(BoneTransform.GetRotation()));
+						NewTrack.ScaleKeys.Add(FVector3f(BoneTransform.GetScale3D()));
+#else
+						NewTrack.PosKeys.Add(BoneTransform.GetLocation());
+						NewTrack.RotKeys.Add(BoneTransform.GetRotation());
+						NewTrack.ScaleKeys.Add(BoneTransform.GetScale3D());
+#endif
+					}
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION > 4
+#if ENGINE_MINOR_VERSION >= 2
+					AnimSequence->GetController().AddBoneCurve(*BoneName, false);
+					AnimSequence->GetController().SetBoneTrackKeys(*BoneName, NewTrack.PosKeys, NewTrack.RotKeys, NewTrack.ScaleKeys, false);
+#else
+					TArray<FBoneAnimationTrack>& BoneTracks = const_cast<TArray<FBoneAnimationTrack>&>(AnimSequence->GetDataModel()->GetBoneAnimationTracks());
+					FBoneAnimationTrack BoneTrack;
+					BoneTrack.Name = *BoneName;
+					BoneTrack.BoneTreeIndex = BoneIndex;
+					BoneTrack.InternalTrackData = NewTrack;
+					BoneTracks.Add(BoneTrack);
+#endif
+#else
+					AnimSequence->AddNewRawTrack(*BoneName, &NewTrack);
+#endif
+#else
+					CompressionCodec->Tracks[BoneIndex] = NewTrack;
+#endif
+				}
+			}
+		}
+	}
+
+	// add MorphTarget curves
+	for (TPair<FName, TArray<TPair<float, float>>>& Pair : MorphTargetCurves)
+	{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+#if WITH_EDITOR
+		FAnimationCurveIdentifier CurveId(Pair.Key, ERawCurveTrackTypes::RCT_Float);
+		AnimSequence->GetController().AddCurve(CurveId);
+		FRichCurve RichCurve;
+#else
+		FRawCurveTracks& CurveTracks = const_cast<FRawCurveTracks&>(AnimSequence->GetCurveData());
+		int32 NewCurveIndex = CurveTracks.FloatCurves.Add(FFloatCurve(Pair.Key, 0));
+		FFloatCurve* NewCurve = &CurveTracks.FloatCurves[NewCurveIndex];
+		FRichCurve& RichCurve = NewCurve->FloatCurve;
+#endif
+#else
+		FSmartName SmartName;
+		if (!AnimSequence->GetSkeleton()->GetSmartNameByName(USkeleton::AnimCurveMappingName, Pair.Key, SmartName))
+		{
+			SmartName.DisplayName = Pair.Key;
+			AnimSequence->GetSkeleton()->VerifySmartName(USkeleton::AnimCurveMappingName, SmartName);
+		}
+
+#if ENGINE_MAJOR_VERSION > 4
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+		FAnimationCurveIdentifier CurveId(SmartName, ERawCurveTrackTypes::RCT_Float);
+		AnimSequence->GetController().AddCurve(CurveId);
+		FRichCurve RichCurve;
+#else
+		FAnimationCurveData& RawCurveData = const_cast<FAnimationCurveData&>(AnimSequence->GetDataModel()->GetCurveData());
+		int32 NewCurveIndex = RawCurveData.FloatCurves.Add(FFloatCurve(SmartName, 0));
+		FFloatCurve* NewCurve = &RawCurveData.FloatCurves[NewCurveIndex];
+		FRichCurve& RichCurve = NewCurve->FloatCurve;
+#endif
+#else
+		FRawCurveTracks& CurveTracks = const_cast<FRawCurveTracks&>(AnimSequence->GetCurveData());
+		int32 NewCurveIndex = CurveTracks.FloatCurves.Add(FFloatCurve(SmartName, 0));
+		FFloatCurve* NewCurve = &CurveTracks.FloatCurves[NewCurveIndex];
+		FRichCurve& RichCurve = NewCurve->FloatCurve;
+#endif
+#else
+		AnimSequence->RawCurveData.AddCurveData(SmartName);
+		FFloatCurve* NewCurve = (FFloatCurve*)AnimSequence->RawCurveData.GetCurveData(SmartName.UID, ERawCurveTrackTypes::RCT_Float);
+		FRichCurve& RichCurve = NewCurve->FloatCurve;
+#endif
+#endif
+
+		for (TPair<float, float>& CurvePair : Pair.Value)
+		{
+			FKeyHandle NewKeyHandle = RichCurve.AddKey(CurvePair.Key, CurvePair.Value, false);
+
+			ERichCurveInterpMode NewInterpMode = RCIM_Linear;
+			ERichCurveTangentMode NewTangentMode = RCTM_Auto;
+			ERichCurveTangentWeightMode NewTangentWeightMode = RCTWM_WeightedNone;
+
+			float LeaveTangent = 0.f;
+			float ArriveTangent = 0.f;
+			float LeaveTangentWeight = 0.f;
+			float ArriveTangentWeight = 0.f;
+
+			RichCurve.SetKeyInterpMode(NewKeyHandle, NewInterpMode);
+			RichCurve.SetKeyTangentMode(NewKeyHandle, NewTangentMode);
+			RichCurve.SetKeyTangentWeightMode(NewKeyHandle, NewTangentWeightMode);
+		}
+
+		AnimSequence->GetSkeleton()->AccumulateCurveMetaData(Pair.Key, false, true);
+
+#if !WITH_EDITOR
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+		FAnimCompressedCurveIndexedName IndexedName;
+		IndexedName.CurveName = Pair.Key;
+		AnimSequence->CompressedData.IndexedCurveNames.Add(IndexedName);
+		const_cast<FCurveMetaData*>(AnimSequence->GetSkeleton()->GetCurveMetaData(Pair.Key))->Type.bMorphtarget = true;
+#else
+		AnimSequence->CompressedData.CompressedCurveNames.Add(SmartName);
+		const_cast<FCurveMetaData*>(AnimSequence->GetSkeleton()->GetCurveMetaData(SmartName.UID))->Type.bMorphtarget = true;
+#endif
+#else
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+		AnimSequence->GetController().SetCurveKeys(CurveId, RichCurve.GetConstRefOfKeys());
+#endif
+#endif
+
+		bHasTracks = true;
+	}
+
+	if (!bHasTracks)
+	{
+		AddError("LoadSkeletalAnimation()", "No Bone or MorphTarget Tracks found in animation");
+		return nullptr;
+	}
+
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MINOR_VERSION >= 2
+	AnimSequence->GetController().SetFrameRate(FrameRate, false);
+	AnimSequence->GetController().SetNumberOfFrames(NumFrames);
+	AnimSequence->GetController().NotifyPopulated();
+	AnimSequence->GetController().CloseBracket(false);
+#else
+	// hack for calling GenerateTransientData()
+	AnimSequence->GetDataModel()->PostDuplicate(false);
+#endif
+#else
+	AnimSequence->PostProcessSequence();
+#endif
+#else
+	AnimSequence->CompressedData.CompressedDataStructure = MakeUnique<FUECompressedAnimData>();
+#if ENGINE_MAJOR_VERSION > 4
+	AnimSequence->CompressedData.CompressedDataStructure->CompressedNumberOfKeys = NumFrames;
+#endif
+	AnimSequence->CompressedData.BoneCompressionCodec = CompressionCodec;
+	UglTFAnimCurveCompressionCodec* AnimCurveCompressionCodec = NewObject<UglTFAnimCurveCompressionCodec>();
+	AnimCurveCompressionCodec->AnimSequence = AnimSequence;
+	AnimSequence->CompressedData.CurveCompressionCodec = AnimCurveCompressionCodec;
+	AnimSequence->PostLoad();
+#endif
+
+	return AnimSequence;
+}
+
 UAnimSequence* FglTFRuntimeParser::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const int32 SkinIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
