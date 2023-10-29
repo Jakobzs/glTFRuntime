@@ -1747,7 +1747,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeletalMesh* Sk
 #if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	return LoadSkeletonAnimationByName(SkeletalMesh->GetSkeleton(), AnimationName, SkeletalMesh, SkeletalAnimationConfig);
 #else
-	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
+	return LoadSkeletalAnimationByName(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
 #endif
 }
 
