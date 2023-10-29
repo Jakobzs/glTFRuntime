@@ -416,8 +416,7 @@ TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(U
 	TMap<FString, UAnimSequence*> EmptyMap;
 	GLTF_CHECK_PARSER(EmptyMap);
 
-	return EmptyMap;
-	//return Parser->LoadNodeSkeletalAnimationsMap(SkeletalMesh, NodeIndex, SkeletalAnimationConfig);
+	return Parser->LoadNodeSkeletonAnimationsMap(Skeleton, NodeIndex, nullptr, SkeletalAnimationConfig);
 }
 
 bool UglTFRuntimeAsset::BuildTransformFromNodeBackward(const int32 NodeIndex, FTransform& Transform)
