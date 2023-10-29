@@ -2392,7 +2392,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* Skeletal
 	return AnimSequence;
 }
 
-UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!Skeleton)
 	{
@@ -2424,7 +2424,12 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, co
 	//AnimSequence->SetSkeleton(SkeletalMesh->Skeleton);
 	AnimSequence->SetSkeleton(Skeleton);
 #endif
-	//AnimSequence->SetPreviewMesh(SkeletalMesh);
+	
+	if (PreviewSkeletalMesh)
+	{
+		AnimSequence->SetPreviewMesh(PreviewSkeletalMesh);
+	}
+
 #if ENGINE_MAJOR_VERSION > 4
 #if WITH_EDITOR
 	FFrameRate FrameRate(SkeletalAnimationConfig.FramesPerSecond, 1);

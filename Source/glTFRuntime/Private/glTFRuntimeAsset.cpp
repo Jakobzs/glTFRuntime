@@ -387,7 +387,7 @@ UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, con
 {
 	GLTF_CHECK_PARSER(nullptr);
 
-	return Parser->LoadSkeletonAnimation(Skeleton, AnimationIndex, SkeletalAnimationConfig);
+	return Parser->LoadSkeletonAnimation(Skeleton, AnimationIndex, nullptr, SkeletalAnimationConfig);
 }
 
 UAnimSequence* UglTFRuntimeAsset::LoadSkeletalAnimationByName(USkeletalMesh* SkeletalMesh, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
