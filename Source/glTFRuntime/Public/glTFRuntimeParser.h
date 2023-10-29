@@ -2005,6 +2005,9 @@ public:
 	USkeleton* LoadSkeleton(const int32 SkinIndex, const FglTFRuntimeSkeletonConfig& SkeletonConfig);
 	USkeleton* LoadSkeletonFromNode(const FglTFRuntimeNode& Node, const FglTFRuntimeSkeletonConfig& SkeletonConfig);
 	UAnimSequence* LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	UAnimSequence* LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString AnimationName, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	UAnimSequence* LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	TMap<FString, UAnimSequence*> LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 
 	void LoadSkeletalMeshAsync(const int32 MeshIndex, const int32 SkinIndex, const FglTFRuntimeSkeletalMeshAsync& AsyncCallback, const FglTFRuntimeSkeletalMeshConfig& SkeletalMeshConfig);
 	void LoadStaticMeshAsync(const int32 MeshIndex, const FglTFRuntimeStaticMeshAsync& AsyncCallback, const FglTFRuntimeStaticMeshConfig& StaticMeshConfig);
