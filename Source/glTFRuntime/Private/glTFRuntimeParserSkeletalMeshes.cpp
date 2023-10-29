@@ -1744,37 +1744,21 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeletalMesh* Sk
 		return nullptr;
 	}
 
-	const TArray<TSharedPtr<FJsonValue>>* JsonAnimations;
-	if (!Root->TryGetArrayField("animations", JsonAnimations))
-	{
-		AddError("LoadSkeletalAnimationByName()", "No animations defined in the asset.");
-		return nullptr;
-	}
-
-	for (int32 AnimationIndex = 0; AnimationIndex < JsonAnimations->Num(); AnimationIndex++)
-	{
-		TSharedPtr<FJsonObject> JsonAnimationObject = (*JsonAnimations)[AnimationIndex]->AsObject();
-		if (!JsonAnimationObject)
-		{
-			return nullptr;
-		}
-
-		FString JsonAnimationName;
-		if (JsonAnimationObject->TryGetStringField("name", JsonAnimationName))
-		{
-			if (JsonAnimationName == AnimationName)
-			{
-				return LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
-			}
-		}
-	}
-
-	return nullptr;
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadSkeletonAnimationByName(SkeletalMesh->GetSkeleton(), AnimationName, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
+#endif
 }
 
 UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
-	return nullptr;
+	if (!SkeletalMesh)
+	{
+		return nullptr;
+	}
+
+	return LoadNodeSkeletonAnimation(SkeletalMesh->Skeleton, NodeIndex, SkeletalMesh, SkeletalAnimationConfig);
 }
 
 TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
@@ -1881,7 +1865,6 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* Skeletal
 #else
 	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
 #endif
-
 }
 
 UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
@@ -2334,16 +2317,36 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, co
 
 UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString AnimationName, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
+	const TArray<TSharedPtr<FJsonValue>>* JsonAnimations;
+	if (!Root->TryGetArrayField("animations", JsonAnimations))
+	{
+		AddError("LoadSkeletalAnimationByName()", "No animations defined in the asset.");
+		return nullptr;
+	}
+
+	for (int32 AnimationIndex = 0; AnimationIndex < JsonAnimations->Num(); AnimationIndex++)
+	{
+		TSharedPtr<FJsonObject> JsonAnimationObject = (*JsonAnimations)[AnimationIndex]->AsObject();
+		if (!JsonAnimationObject)
+		{
+			return nullptr;
+		}
+
+		FString JsonAnimationName;
+		if (JsonAnimationObject->TryGetStringField("name", JsonAnimationName))
+		{
+			if (JsonAnimationName == AnimationName)
+			{
+				return LoadSkeletonAnimation(Skeleton, AnimationIndex, PreviewSkeletalMesh, SkeletalAnimationConfig);
+			}
+		}
+	}
+
 	return nullptr;
 }
 
 UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
-	if (!PreviewSkeletalMesh)
-	{
-		return nullptr;
-	}
-
 	FglTFRuntimeNode Node;
 	if (!LoadNode(NodeIndex, Node))
 	{
