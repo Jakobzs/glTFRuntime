@@ -1758,7 +1758,12 @@ UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeletalMesh* Skel
 		return nullptr;
 	}
 
-	return LoadNodeSkeletonAnimation(SkeletalMesh->Skeleton, NodeIndex, SkeletalMesh, SkeletalAnimationConfig);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadNodeSkeletonAnimation(SkeletalMesh->GetSkeleton(), NodeIndex, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadNodeSkeletonAnimation(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
+#endif
+	
 }
 
 TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
@@ -1860,6 +1865,11 @@ TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(
 
 UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
+	if (!SkeletalMesh)
+	{
+		return nullptr;
+	}
+
 #if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
 #else
