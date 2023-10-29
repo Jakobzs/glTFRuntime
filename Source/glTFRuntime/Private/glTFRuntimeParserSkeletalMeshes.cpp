@@ -1892,13 +1892,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, co
 
 	int32 NumFrames = FMath::Max<int32>(Duration * SkeletalAnimationConfig.FramesPerSecond, 1);
 	UAnimSequence* AnimSequence = NewObject<UAnimSequence>(GetTransientPackage(), NAME_None, RF_Public);
-#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
-	//AnimSequence->SetSkeleton(SkeletalMesh->GetSkeleton());
 	AnimSequence->SetSkeleton(Skeleton);
-#else
-	//AnimSequence->SetSkeleton(SkeletalMesh->Skeleton);
-	AnimSequence->SetSkeleton(Skeleton);
-#endif
 	
 	if (PreviewSkeletalMesh)
 	{

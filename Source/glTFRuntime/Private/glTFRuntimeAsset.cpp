@@ -401,16 +401,14 @@ UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimationByName(USkeleton* Skeleto
 {
 	GLTF_CHECK_PARSER(nullptr);
 
-	return nullptr;
-	//return Parser->LoadSkeletalAnimationByName(SkeletalMesh, AnimationName, SkeletalAnimationConfig);
+	return Parser->LoadSkeletonAnimationByName(Skeleton, AnimationName, nullptr, SkeletalAnimationConfig);
 }
 
 UAnimSequence* UglTFRuntimeAsset::LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	GLTF_CHECK_PARSER(nullptr);
 
-	return nullptr;
-	//return Parser->LoadNodeSkeletalAnimation(SkeletalMesh, NodeIndex, SkeletalAnimationConfig);
+	return Parser->LoadNodeSkeletonAnimation(Skeleton, NodeIndex, nullptr, SkeletalAnimationConfig);
 }
 
 TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
