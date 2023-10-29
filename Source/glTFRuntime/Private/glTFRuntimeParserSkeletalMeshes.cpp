@@ -1774,83 +1774,6 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeletalMesh* Sk
 
 UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
-	if (!SkeletalMesh)
-	{
-		return nullptr;
-	}
-
-	FglTFRuntimeNode Node;
-	if (!LoadNode(NodeIndex, Node))
-	{
-		return nullptr;
-	}
-
-	TArray<int32> Joints;
-
-	// this could be a static mesh read as a skeletal one...
-	if (Node.SkinIndex > INDEX_NONE)
-	{
-		TSharedPtr<FJsonObject> JsonSkinObject = GetJsonObjectFromRootIndex("skins", Node.SkinIndex);
-		if (!JsonSkinObject)
-		{
-			AddError("LoadNodeSkeletalAnimation()", "No skins defined in the asset");
-			return nullptr;
-		}
-
-		const TArray<TSharedPtr<FJsonValue>>* JsonJoints;
-		if (!JsonSkinObject->TryGetArrayField("joints", JsonJoints))
-		{
-			AddError("LoadNodeSkeletalAnimation()", "No joints defined in the skin");
-			return nullptr;
-		}
-
-		for (TSharedPtr<FJsonValue> JsonJoint : (*JsonJoints))
-		{
-			int64 JointIndex;
-			if (!JsonJoint->TryGetNumber(JointIndex))
-			{
-				return nullptr;
-			}
-			Joints.Add(JointIndex);
-		}
-	}
-
-	const TArray<TSharedPtr<FJsonValue>>* JsonAnimations;
-	if (!Root->TryGetArrayField("animations", JsonAnimations))
-	{
-		return nullptr;
-	}
-
-	for (int32 JsonAnimationIndex = 0; JsonAnimationIndex < JsonAnimations->Num(); JsonAnimationIndex++)
-	{
-		TSharedPtr<FJsonObject> JsonAnimationObject = (*JsonAnimations)[JsonAnimationIndex]->AsObject();
-		if (!JsonAnimationObject)
-		{
-			return nullptr;
-		}
-		float Duration;
-		TMap<FString, FRawAnimSequenceTrack> Tracks;
-		TMap<FName, TArray<TPair<float, float>>> MorphTargetCurves;
-		bool bAnimationFound = false;
-		if (!LoadSkeletalAnimation_Internal(JsonAnimationObject.ToSharedRef(), Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig, [&Joints, &bAnimationFound, NodeIndex](const FglTFRuntimeNode& Node) -> bool
-			{
-				if (!bAnimationFound)
-				{
-					bAnimationFound = (Node.Index == NodeIndex) || Joints.Contains(Node.Index);
-				}
-				return true;
-			}))
-		{
-			return nullptr;
-		}
-		if (bAnimationFound || MorphTargetCurves.Num() > 0)
-		{
-			// this is very inefficient as we parse the tracks twice
-			// TODO: refactor it
-			return LoadSkeletalAnimation(SkeletalMesh, JsonAnimationIndex, SkeletalAnimationConfig);
-		}
-	}
-
 	return nullptr;
 }
 
@@ -2407,6 +2330,101 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, co
 #endif
 
 	return AnimSequence;
+}
+
+UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString AnimationName, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	return nullptr;
+}
+
+UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	if (!PreviewSkeletalMesh)
+	{
+		return nullptr;
+	}
+
+	FglTFRuntimeNode Node;
+	if (!LoadNode(NodeIndex, Node))
+	{
+		return nullptr;
+	}
+
+	TArray<int32> Joints;
+
+	// this could be a static mesh read as a skeletal one...
+	if (Node.SkinIndex > INDEX_NONE)
+	{
+		TSharedPtr<FJsonObject> JsonSkinObject = GetJsonObjectFromRootIndex("skins", Node.SkinIndex);
+		if (!JsonSkinObject)
+		{
+			AddError("LoadNodeSkeletalAnimation()", "No skins defined in the asset");
+			return nullptr;
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* JsonJoints;
+		if (!JsonSkinObject->TryGetArrayField("joints", JsonJoints))
+		{
+			AddError("LoadNodeSkeletalAnimation()", "No joints defined in the skin");
+			return nullptr;
+		}
+
+		for (TSharedPtr<FJsonValue> JsonJoint : (*JsonJoints))
+		{
+			int64 JointIndex;
+			if (!JsonJoint->TryGetNumber(JointIndex))
+			{
+				return nullptr;
+			}
+			Joints.Add(JointIndex);
+		}
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* JsonAnimations;
+	if (!Root->TryGetArrayField("animations", JsonAnimations))
+	{
+		return nullptr;
+	}
+
+	for (int32 JsonAnimationIndex = 0; JsonAnimationIndex < JsonAnimations->Num(); JsonAnimationIndex++)
+	{
+		TSharedPtr<FJsonObject> JsonAnimationObject = (*JsonAnimations)[JsonAnimationIndex]->AsObject();
+		if (!JsonAnimationObject)
+		{
+			return nullptr;
+		}
+		float Duration;
+		TMap<FString, FRawAnimSequenceTrack> Tracks;
+		TMap<FName, TArray<TPair<float, float>>> MorphTargetCurves;
+		bool bAnimationFound = false;
+		if (!LoadSkeletalAnimation_Internal(JsonAnimationObject.ToSharedRef(), Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig, [&Joints, &bAnimationFound, NodeIndex](const FglTFRuntimeNode& Node) -> bool {
+				if (!bAnimationFound)
+				{
+					bAnimationFound = (Node.Index == NodeIndex) || Joints.Contains(Node.Index);
+				}
+				return true;
+			}))
+		{
+			return nullptr;
+		}
+		if (bAnimationFound || MorphTargetCurves.Num() > 0)
+		{
+			// this is very inefficient as we parse the tracks twice
+			// TODO: refactor it
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+			return LoadSkeletonAnimation(PreviewSkeletalMesh->GetSkeleton(), JsonAnimationIndex, PreviewSkeletalMesh, SkeletalAnimationConfig);
+#else
+			return LoadSkeletonAnimation(PreviewSkeletalMesh->Skeleton, JsonAnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#endif
+		}
+	}
+
+	return nullptr;
+}
+
+TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	return TMap<FString, UAnimSequence*>();
 }
 
 UAnimSequence* FglTFRuntimeParser::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const int32 SkinIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
