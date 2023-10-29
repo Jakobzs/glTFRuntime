@@ -114,16 +114,16 @@ public:
 	UAnimSequence* LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 	
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SkeletalAnimationConfig", AutoCreateRefTerm = "SkeletalAnimationConfig"), Category = "glTFRuntime")
-	UAnimSequence* LoadSkeletalAnimationByName(USkeleton* Skeleton, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	UAnimSequence* LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SkeletalAnimationConfig", AutoCreateRefTerm = "SkeletalAnimationConfig"), Category = "glTFRuntime")
-	UAnimSequence* LoadNodeSkeletalAnimation(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	UAnimSequence* LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SkeletalAnimationConfig", AutoCreateRefTerm = "SkeletalAnimationConfig"), Category = "glTFRuntime")
-	TMap<FString, UAnimSequence*> LoadNodeSkeletalAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	TMap<FString, UAnimSequence*> LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SkeletalAnimationConfig", AutoCreateRefTerm = "SkeletalAnimationConfig"), Category = "glTFRuntime")
-	UAnimMontage* LoadSkeletalAnimationAsMontage(USkeleton* Skeleton, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+	UAnimMontage* LoadSkeletonAnimationAsMontage(USkeleton* Skeleton, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 	// SKELETON BRANCH
 
 	UFUNCTION(BlueprintCallable, Category = "glTFRuntime")
