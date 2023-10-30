@@ -2333,11 +2333,7 @@ UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletonAnimation(USkeleton* Skeleton
 		{
 			// this is very inefficient as we parse the tracks twice
 			// TODO: refactor it
-#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
-			return LoadSkeletonAnimation(PreviewSkeletalMesh->GetSkeleton(), JsonAnimationIndex, PreviewSkeletalMesh, SkeletalAnimationConfig);
-#else
-			return LoadSkeletonAnimation(PreviewSkeletalMesh->Skeleton, JsonAnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
-#endif
+			return LoadSkeletonAnimation(Skeleton, JsonAnimationIndex, PreviewSkeletalMesh, SkeletalAnimationConfig);
 		}
 	}
 
