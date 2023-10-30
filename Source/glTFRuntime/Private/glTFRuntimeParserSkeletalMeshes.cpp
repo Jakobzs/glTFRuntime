@@ -1775,7 +1775,11 @@ TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(
 		return SkeletalAnimationsMap;
 	}
 
-	return SkeletalAnimationsMap;
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadNodeSkeletonAnimationsMap(SkeletalMesh->GetSkeleton(), NodeIndex, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadNodeSkeletonAnimationsMap(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
+#endif
 }
 
 UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
