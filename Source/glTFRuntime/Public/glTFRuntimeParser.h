@@ -18,6 +18,7 @@
 #include "Engine/Texture2DArray.h"
 #include "Engine/TextureCube.h"
 #include "Engine/TextureMipDataProviderFactory.h"
+#include "Engine/VolumeTexture.h"
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/LightComponent.h"
@@ -1542,6 +1543,11 @@ struct FglTFRuntimeMeshLOD
 		bHasUV = false;
 		bHasVertexColors = false;
 	}
+
+	void Empty()
+	{
+		Primitives.Empty();
+	}
 };
 
 struct FglTFRuntimeStaticMeshContext : public FGCObject
@@ -1929,6 +1935,7 @@ struct FglTFRuntimePluginCacheData
 DECLARE_DYNAMIC_DELEGATE_OneParam(FglTFRuntimeStaticMeshAsync, UStaticMesh*, StaticMesh);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FglTFRuntimeSkeletalMeshAsync, USkeletalMesh*, SkeletalMesh);
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FglTFRuntimeMeshLODAsync, const bool, bValid, const FglTFRuntimeMeshLOD&, MeshLOD);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FglTFRuntimeTextureCubeAsync, UTextureCube*, TextureCube);
 
 using FglTFRuntimeStaticMeshContextRef = TSharedRef<FglTFRuntimeStaticMeshContext, ESPMode::ThreadSafe>;
 using FglTFRuntimeSkeletalMeshContextRef = TSharedRef<FglTFRuntimeSkeletalMeshContext, ESPMode::ThreadSafe>;
@@ -2109,6 +2116,8 @@ public:
 	UTexture2D* BuildTexture(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
 	UTextureCube* BuildTextureCube(UObject* Outer, const TArray<FglTFRuntimeMipMap>& MipsXP, const TArray<FglTFRuntimeMipMap>& MipsXN, const TArray<FglTFRuntimeMipMap>& MipsYP, const TArray<FglTFRuntimeMipMap>& MipsYN, const TArray<FglTFRuntimeMipMap>& MipsZP, const TArray<FglTFRuntimeMipMap>& MipsZN, const bool bAutoRotate, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
 	UTexture2DArray* BuildTextureArray(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips,const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
+	UVolumeTexture* BuildVolumeTexture(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips, const int32 TileZ, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
+
 
 	TArray<FString> MaterialsVariants;
 
@@ -2324,6 +2333,7 @@ protected:
 	TArray<FString> Errors;
 
 	FString BaseDirectory;
+	FString BaseFilename;
 
 	TArray64<uint8> AsBlob;
 
@@ -2604,8 +2614,10 @@ public:
 	}
 
 	TMap<FString, TSharedPtr<FglTFRuntimePluginCacheData>> PluginsCacheData;
+	FCriticalSection PluginsCacheDataLock;
 
 	const FString& GetBaseDirectory() const { return BaseDirectory; }
+	const FString& GetBaseFilename() const { return BaseFilename; }
 
 	bool LoadPathToBlob(const FString& Path, TArray64<uint8>& Blob);
 
