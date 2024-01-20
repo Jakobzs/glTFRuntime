@@ -1794,30 +1794,18 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationFromTracksAndMorphTarget
 #endif
 }
 
-UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
-	if (!Skeleton)
+	if (!SkeletalMesh)
 	{
 		return nullptr;
 	}
 
-	TSharedPtr<FJsonObject> JsonAnimationObject = GetJsonObjectFromRootIndex("animations", AnimationIndex);
-	if (!JsonAnimationObject)
-	{
-		AddError("LoadNodeSkeletalAnimation()", FString::Printf(TEXT("Unable to find animation %d"), AnimationIndex));
-		return nullptr;
-	}
-
-	float Duration;
-	TMap<FString, FRawAnimSequenceTrack> Tracks;
-
-	TMap<FName, TArray<TPair<float, float>>> MorphTargetCurves;
-	if (!LoadSkeletalAnimation_Internal(JsonAnimationObject.ToSharedRef(), Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig, [](const FglTFRuntimeNode& Node) -> bool { return true; }))
-	{
-		return nullptr;
-	}
-
-	return LoadSkeletonAnimationFromTracksAndMorphTargets(Skeleton, nullptr, Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#endif
 }
 
 UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString AnimationName, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
@@ -2423,6 +2411,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	AnimSequence->GetController().SetNumberOfFrames(NumFrames);
 	AnimSequence->GetController().NotifyPopulated();
 	AnimSequence->GetController().CloseBracket(false);
+	AnimSequence->GetController().CloseBracket(false);
 #else
 	// hack for calling GenerateTransientData()
 	AnimSequence->GetDataModel()->PostDuplicate(false);
@@ -2445,18 +2434,30 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	return AnimSequence;
 }
 
-UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
-	if (!SkeletalMesh)
+	if (!Skeleton)
 	{
 		return nullptr;
 	}
 
-#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
-	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
-#else
-	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
-#endif
+	TSharedPtr<FJsonObject> JsonAnimationObject = GetJsonObjectFromRootIndex("animations", AnimationIndex);
+	if (!JsonAnimationObject)
+	{
+		AddError("LoadNodeSkeletalAnimation()", FString::Printf(TEXT("Unable to find animation %d"), AnimationIndex));
+		return nullptr;
+	}
+
+	float Duration;
+	TMap<FString, FRawAnimSequenceTrack> Tracks;
+
+	TMap<FName, TArray<TPair<float, float>>> MorphTargetCurves;
+	if (!LoadSkeletalAnimation_Internal(JsonAnimationObject.ToSharedRef(), Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig, [](const FglTFRuntimeNode& Node) -> bool { return true; }))
+	{
+		return nullptr;
+	}
+
+	return LoadSkeletonAnimationFromTracksAndMorphTargets(Skeleton, nullptr, Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig);
 }
 
 UAnimSequence* FglTFRuntimeParser::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const int32 SkinIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
