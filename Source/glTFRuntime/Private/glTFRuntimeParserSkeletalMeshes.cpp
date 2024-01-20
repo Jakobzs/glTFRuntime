@@ -1761,7 +1761,6 @@ UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeletalMesh* Skel
 #else
 	return LoadNodeSkeletonAnimation(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
 #endif
-	
 }
 
 TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
