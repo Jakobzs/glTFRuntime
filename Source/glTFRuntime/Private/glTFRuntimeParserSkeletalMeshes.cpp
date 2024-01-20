@@ -1788,9 +1788,9 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationFromTracksAndMorphTarget
 	}
 
 #if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
-	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+	return LoadSkeletonAnimationFromTracksAndMorphTargets(SkeletalMesh->GetSkeleton(), SkeletalMesh, Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig);
 #else
-	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+	return LoadSkeletonAnimationFromTracksAndMorphTargets(SkeletalMesh->Skeleton, SkeletalMesh, Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig);
 #endif
 }
 
@@ -2438,6 +2438,11 @@ TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletonAnimationsMap(
 	}
 	
 	return SkeletalAnimationsMap;
+}
+
+UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTargets(USkeleton* Skeleton, USkeletalMesh* PreviewSkeletalMesh, TMap<FString, FRawAnimSequenceTrack>& Tracks, TMap<FName, TArray<TPair<float, float>>>& MorphTargetCurves, const float Duration, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	return nullptr;
 }
 
 UAnimSequence* FglTFRuntimeParser::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const int32 SkinIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
