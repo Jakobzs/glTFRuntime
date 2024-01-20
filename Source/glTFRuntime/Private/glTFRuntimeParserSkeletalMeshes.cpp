@@ -2017,7 +2017,6 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	int32 NumFrames = FMath::Max<int32>(Duration * SkeletalAnimationConfig.FramesPerSecond, 1);
 	UAnimSequence* AnimSequence = NewObject<UAnimSequence>(GetTransientPackage(), NAME_None, RF_Public);
 	AnimSequence->SetSkeleton(Skeleton);
-
 	if (PreviewSkeletalMesh)
 	{
 		AnimSequence->SetPreviewMesh(PreviewSkeletalMesh);
