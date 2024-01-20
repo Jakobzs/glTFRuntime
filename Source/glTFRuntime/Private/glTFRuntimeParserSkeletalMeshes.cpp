@@ -1735,6 +1735,36 @@ void FglTFRuntimeParser::LoadSkeletalMeshRecursiveAsync(const FString& NodeName,
 		});
 }
 
+UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString AnimationName, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	const TArray<TSharedPtr<FJsonValue>>* JsonAnimations;
+	if (!Root->TryGetArrayField("animations", JsonAnimations))
+	{
+		AddError("LoadSkeletalAnimationByName()", "No animations defined in the asset.");
+		return nullptr;
+	}
+
+	for (int32 AnimationIndex = 0; AnimationIndex < JsonAnimations->Num(); AnimationIndex++)
+	{
+		TSharedPtr<FJsonObject> JsonAnimationObject = (*JsonAnimations)[AnimationIndex]->AsObject();
+		if (!JsonAnimationObject)
+		{
+			return nullptr;
+		}
+
+		FString JsonAnimationName;
+		if (JsonAnimationObject->TryGetStringField("name", JsonAnimationName))
+		{
+			if (JsonAnimationName == AnimationName)
+			{
+				return LoadSkeletonAnimation(Skeleton, AnimationIndex, PreviewSkeletalMesh, SkeletalAnimationConfig);
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeletalMesh* SkeletalMesh, const FString AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
