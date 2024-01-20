@@ -678,8 +678,6 @@ UAnimMontage* UglTFRuntimeAsset::LoadSkeletonAnimationAsMontage(USkeleton* Skele
 	return AnimMontage;
 }
 
-
-
 bool UglTFRuntimeAsset::BuildTransformFromNodeBackward(const int32 NodeIndex, FTransform& Transform)
 {
 	GLTF_CHECK_PARSER(false);
