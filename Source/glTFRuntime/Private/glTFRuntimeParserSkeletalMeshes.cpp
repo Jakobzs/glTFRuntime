@@ -1937,7 +1937,6 @@ TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletonAnimationsMap(
 	}
 
 	FglTFRuntimeNode Node;
-	
 	if (!LoadNode(NodeIndex, Node))
 	{
 		return SkeletalAnimationsMap;
