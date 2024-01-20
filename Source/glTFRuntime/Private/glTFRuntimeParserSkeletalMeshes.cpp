@@ -2036,10 +2036,10 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	}
 	
 #if ENGINE_MAJOR_VERSION > 4
-	#if WITH_EDITOR
+#if WITH_EDITOR
 	FFrameRate FrameRate(SkeletalAnimationConfig.FramesPerSecond, 1);
 
-		#if ENGINE_MINOR_VERSION < 2
+#if ENGINE_MINOR_VERSION < 2
 	FIntProperty* IntProperty = CastField<FIntProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("NumberOfFrames")));
 	IntProperty->SetPropertyValue_InContainer(AnimSequence->GetDataModel(), NumFrames);
 	FFloatProperty* FloatProperty = CastField<FFloatProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("PlayLength")));
@@ -2047,20 +2047,21 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	IntProperty = CastField<FIntProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("NumberOfKeys")));
 	IntProperty->SetPropertyValue_InContainer(AnimSequence->GetDataModel(), NumFrames);
 
+
 	FStructProperty* StructProperty = CastField<FStructProperty>(UAnimDataModel::StaticClass()->FindPropertyByName(TEXT("FrameRate")));
 	FFrameRate* FrameRatePtr = StructProperty->ContainerPtrToValuePtr<FFrameRate>(AnimSequence->GetDataModel());
 	*FrameRatePtr = FrameRate;
-		#endif
-	#else
+#endif
+#else
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		#if ENGINE_MINOR_VERSION >= 2
-	FFloatProperty* FloatProperty = CastField<FFloatProperty>(UAnimSequence::StaticClass()->FindPropertyByName(TEXT("SequenceLength")));
+#if ENGINE_MINOR_VERSION >= 2
+		FFloatProperty* FloatProperty = CastField<FFloatProperty>(UAnimSequence::StaticClass()->FindPropertyByName(TEXT("SequenceLength")));
 	FloatProperty->SetPropertyValue_InContainer(AnimSequence, Duration);
-		#else
-	AnimSequence->SequenceLength = Duration;
-		#endif
+#else
+		AnimSequence->SequenceLength = Duration;
+#endif
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
-	#endif
+#endif
 #else
 	AnimSequence->SetRawNumberOfFrame(NumFrames);
 	AnimSequence->SequenceLength = Duration;
@@ -2078,22 +2079,23 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 		AnimSequence->CompressedData.CompressedTrackToSkeletonMapTable[BoneIndex] = BoneIndex;
 		for (int32 FrameIndex = 0; FrameIndex < NumFrames; FrameIndex++)
 		{
-	#if ENGINE_MAJOR_VERSION > 4
+#if ENGINE_MAJOR_VERSION > 4
 			CompressionCodec->Tracks[BoneIndex].PosKeys.Add(FVector3f(BonesPoses[BoneIndex].GetLocation()));
 			CompressionCodec->Tracks[BoneIndex].RotKeys.Add(FQuat4f(BonesPoses[BoneIndex].GetRotation()));
 			CompressionCodec->Tracks[BoneIndex].ScaleKeys.Add(FVector3f(BonesPoses[BoneIndex].GetScale3D()));
-	#else
+#else
 			CompressionCodec->Tracks[BoneIndex].PosKeys.Add(BonesPoses[BoneIndex].GetLocation());
 			CompressionCodec->Tracks[BoneIndex].RotKeys.Add(BonesPoses[BoneIndex].GetRotation());
 			CompressionCodec->Tracks[BoneIndex].ScaleKeys.Add(BonesPoses[BoneIndex].GetScale3D());
-	#endif
+#endif
+
 		}
 	}
 #else
-	#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
 	AnimSequence->GetController().OpenBracket(FText::FromString("glTFRuntime"), false);
 	AnimSequence->GetController().InitializeModel();
-	#endif
+#endif
 #endif
 
 	bool bHasTracks = false;
@@ -2200,6 +2202,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 			Pair.Value.ScaleKeys.RemoveAt(NumFrames, Pair.Value.ScaleKeys.Num() - NumFrames, true);
 		}
 
+
 		if (BoneIndex == 0)
 		{
 			if (SkeletalAnimationConfig.RootNodeIndex > INDEX_NONE)
@@ -2249,22 +2252,23 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 			}
 		}
 
+
 #if WITH_EDITOR
-	#if ENGINE_MAJOR_VERSION >= 5
-		#if ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MINOR_VERSION >= 2
 		AnimSequence->GetController().AddBoneCurve(BoneName, false);
 		AnimSequence->GetController().SetBoneTrackKeys(BoneName, Pair.Value.PosKeys, Pair.Value.RotKeys, Pair.Value.ScaleKeys, false);
-		#else
+#else
 		TArray<FBoneAnimationTrack>& BoneTracks = const_cast<TArray<FBoneAnimationTrack>&>(AnimSequence->GetDataModel()->GetBoneAnimationTracks());
 		FBoneAnimationTrack BoneTrack;
 		BoneTrack.Name = BoneName;
 		BoneTrack.BoneTreeIndex = BoneIndex;
 		BoneTrack.InternalTrackData = Pair.Value;
 		BoneTracks.Add(BoneTrack);
-		#endif
-	#else
+#endif
+#else
 		AnimSequence->AddNewRawTrack(BoneName, &Pair.Value);
-	#endif
+#endif
 #else
 		CompressionCodec->Tracks[BoneIndex] = Pair.Value;
 #endif
@@ -2297,21 +2301,21 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 #endif
 					}
 #if WITH_EDITOR
-	#if ENGINE_MAJOR_VERSION > 4
-		#if ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION > 4
+#if ENGINE_MINOR_VERSION >= 2
 					AnimSequence->GetController().AddBoneCurve(*BoneName, false);
 					AnimSequence->GetController().SetBoneTrackKeys(*BoneName, NewTrack.PosKeys, NewTrack.RotKeys, NewTrack.ScaleKeys, false);
-		#else
+#else
 					TArray<FBoneAnimationTrack>& BoneTracks = const_cast<TArray<FBoneAnimationTrack>&>(AnimSequence->GetDataModel()->GetBoneAnimationTracks());
 					FBoneAnimationTrack BoneTrack;
 					BoneTrack.Name = *BoneName;
 					BoneTrack.BoneTreeIndex = BoneIndex;
 					BoneTrack.InternalTrackData = NewTrack;
 					BoneTracks.Add(BoneTrack);
-		#endif
-	#else
+#endif
+#else
 					AnimSequence->AddNewRawTrack(*BoneName, &NewTrack);
-	#endif
+#endif
 #else
 					CompressionCodec->Tracks[BoneIndex] = NewTrack;
 #endif
@@ -2324,16 +2328,16 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	for (TPair<FName, TArray<TPair<float, float>>>& Pair : MorphTargetCurves)
 	{
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
-	#if WITH_EDITOR
+#if WITH_EDITOR
 		FAnimationCurveIdentifier CurveId(Pair.Key, ERawCurveTrackTypes::RCT_Float);
 		AnimSequence->GetController().AddCurve(CurveId);
 		FRichCurve RichCurve;
-	#else
+#else
 		FRawCurveTracks& CurveTracks = const_cast<FRawCurveTracks&>(AnimSequence->GetCurveData());
 		int32 NewCurveIndex = CurveTracks.FloatCurves.Add(FFloatCurve(Pair.Key, 0));
 		FFloatCurve* NewCurve = &CurveTracks.FloatCurves[NewCurveIndex];
 		FRichCurve& RichCurve = NewCurve->FloatCurve;
-	#endif
+#endif
 #else
 		FSmartName SmartName;
 		if (!AnimSequence->GetSkeleton()->GetSmartNameByName(USkeleton::AnimCurveMappingName, Pair.Key, SmartName))
@@ -2342,29 +2346,29 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 			AnimSequence->GetSkeleton()->VerifySmartName(USkeleton::AnimCurveMappingName, SmartName);
 		}
 
-	#if ENGINE_MAJOR_VERSION > 4
-		#if WITH_EDITOR
-			#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION > 4
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
 		FAnimationCurveIdentifier CurveId(SmartName, ERawCurveTrackTypes::RCT_Float);
 		AnimSequence->GetController().AddCurve(CurveId);
 		FRichCurve RichCurve;
-			#else
+#else
 		FAnimationCurveData& RawCurveData = const_cast<FAnimationCurveData&>(AnimSequence->GetDataModel()->GetCurveData());
 		int32 NewCurveIndex = RawCurveData.FloatCurves.Add(FFloatCurve(SmartName, 0));
 		FFloatCurve* NewCurve = &RawCurveData.FloatCurves[NewCurveIndex];
 		FRichCurve& RichCurve = NewCurve->FloatCurve;
-			#endif
-		#else
+#endif
+#else
 		FRawCurveTracks& CurveTracks = const_cast<FRawCurveTracks&>(AnimSequence->GetCurveData());
 		int32 NewCurveIndex = CurveTracks.FloatCurves.Add(FFloatCurve(SmartName, 0));
 		FFloatCurve* NewCurve = &CurveTracks.FloatCurves[NewCurveIndex];
 		FRichCurve& RichCurve = NewCurve->FloatCurve;
-		#endif
-	#else
+#endif
+#else
 		AnimSequence->RawCurveData.AddCurveData(SmartName);
 		FFloatCurve* NewCurve = (FFloatCurve*)AnimSequence->RawCurveData.GetCurveData(SmartName.UID, ERawCurveTrackTypes::RCT_Float);
 		FRichCurve& RichCurve = NewCurve->FloatCurve;
-	#endif
+#endif
 #endif
 
 		for (TPair<float, float>& CurvePair : Pair.Value)
@@ -2388,19 +2392,19 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 		AnimSequence->GetSkeleton()->AccumulateCurveMetaData(Pair.Key, false, true);
 
 #if !WITH_EDITOR
-	#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
 		FAnimCompressedCurveIndexedName IndexedName;
 		IndexedName.CurveName = Pair.Key;
 		AnimSequence->CompressedData.IndexedCurveNames.Add(IndexedName);
 		const_cast<FCurveMetaData*>(AnimSequence->GetSkeleton()->GetCurveMetaData(Pair.Key))->Type.bMorphtarget = true;
-	#else
+#else
 		AnimSequence->CompressedData.CompressedCurveNames.Add(SmartName);
 		const_cast<FCurveMetaData*>(AnimSequence->GetSkeleton()->GetCurveMetaData(SmartName.UID))->Type.bMorphtarget = true;
-	#endif
+#endif
 #else
-	#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
 		AnimSequence->GetController().SetCurveKeys(CurveId, RichCurve.GetConstRefOfKeys());
-	#endif
+#endif
 #endif
 
 		bHasTracks = true;
@@ -2413,24 +2417,24 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	}
 
 #if WITH_EDITOR
-	#if ENGINE_MAJOR_VERSION >= 5
-		#if ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MINOR_VERSION >= 2
 	AnimSequence->GetController().SetFrameRate(FrameRate, false);
 	AnimSequence->GetController().SetNumberOfFrames(NumFrames);
 	AnimSequence->GetController().NotifyPopulated();
 	AnimSequence->GetController().CloseBracket(false);
-		#else
+#else
 	// hack for calling GenerateTransientData()
 	AnimSequence->GetDataModel()->PostDuplicate(false);
-		#endif
-	#else
+#endif
+#else
 	AnimSequence->PostProcessSequence();
-	#endif
+#endif
 #else
 	AnimSequence->CompressedData.CompressedDataStructure = MakeUnique<FUECompressedAnimData>();
-	#if ENGINE_MAJOR_VERSION > 4
+#if ENGINE_MAJOR_VERSION > 4
 	AnimSequence->CompressedData.CompressedDataStructure->CompressedNumberOfKeys = NumFrames;
-	#endif
+#endif
 	AnimSequence->CompressedData.BoneCompressionCodec = CompressionCodec;
 	UglTFAnimCurveCompressionCodec* AnimCurveCompressionCodec = NewObject<UglTFAnimCurveCompressionCodec>();
 	AnimCurveCompressionCodec->AnimSequence = AnimSequence;
