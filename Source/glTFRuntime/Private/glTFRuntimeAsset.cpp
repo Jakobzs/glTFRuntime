@@ -661,6 +661,25 @@ TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(U
 	return Parser->LoadNodeSkeletonAnimationsMap(Skeleton, NodeIndex, nullptr, SkeletalAnimationConfig);
 }
 
+UAnimMontage* UglTFRuntimeAsset::LoadSkeletonAnimationAsMontage(USkeleton* Skeleton, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& AnimationConfig)
+{
+	UAnimSequence* AnimSequence = LoadSkeletonAnimation(Skeleton, AnimationIndex, AnimationConfig);
+	if (!AnimSequence)
+	{
+		return nullptr;
+	}
+
+	UAnimMontage* AnimMontage = UAnimMontage::CreateSlotAnimationAsDynamicMontage(AnimSequence, FName(SlotNodeName), 0, 0, 1);
+	if (!AnimMontage)
+	{
+		return nullptr;
+	}
+
+	return AnimMontage;
+}
+
+
+
 bool UglTFRuntimeAsset::BuildTransformFromNodeBackward(const int32 NodeIndex, FTransform& Transform)
 {
 	GLTF_CHECK_PARSER(false);
