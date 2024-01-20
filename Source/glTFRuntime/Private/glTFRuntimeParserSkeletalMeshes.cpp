@@ -2441,6 +2441,20 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	return AnimSequence;
 }
 
+UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	if (!SkeletalMesh)
+	{
+		return nullptr;
+	}
+
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#endif
+}
+
 UAnimSequence* FglTFRuntimeParser::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const int32 SkinIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
@@ -3754,20 +3768,6 @@ USkeletalMesh* FglTFRuntimeParser::LoadSkeletalMeshFromRuntimeLODs(const TArray<
 	}
 
 	return FinalizeSkeletalMeshWithLODs(SkeletalMeshContext);
-}
-
-UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
-{
-	if (!SkeletalMesh)
-	{
-		return nullptr;
-	}
-
-#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
-	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
-#else
-	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
-#endif
 }
 
 const FBox& FglTFRuntimeSkeletalMeshContext::GetBoneBox(const int32 BoneIndex)
