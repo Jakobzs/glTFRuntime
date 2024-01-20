@@ -2411,7 +2411,6 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTarget
 	AnimSequence->GetController().SetNumberOfFrames(NumFrames);
 	AnimSequence->GetController().NotifyPopulated();
 	AnimSequence->GetController().CloseBracket(false);
-	AnimSequence->GetController().CloseBracket(false);
 #else
 	// hack for calling GenerateTransientData()
 	AnimSequence->GetDataModel()->PostDuplicate(false);
