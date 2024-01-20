@@ -3351,23 +3351,11 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* Skeletal
 		return nullptr;
 	}
 
-	TSharedPtr<FJsonObject> JsonAnimationObject = GetJsonObjectFromRootIndex("animations", AnimationIndex);
-	if (!JsonAnimationObject)
-	{
-		AddError("LoadNodeSkeletalAnimation()", FString::Printf(TEXT("Unable to find animation %d"), AnimationIndex));
-		return nullptr;
-	}
-
-	float Duration;
-	TMap<FString, FRawAnimSequenceTrack> Tracks;
-
-	TMap<FName, TArray<TPair<float, float>>> MorphTargetCurves;
-	if (!LoadSkeletalAnimation_Internal(JsonAnimationObject.ToSharedRef(), Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig, [](const FglTFRuntimeNode& Node) -> bool { return true; }))
-	{
-		return nullptr;
-	}
-
-	return LoadSkeletalAnimationFromTracksAndMorphTargets(SkeletalMesh, Tracks, MorphTargetCurves, Duration, SkeletalAnimationConfig);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadSkeletonAnimation(SkeletalMesh->GetSkeleton(), AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadSkeletonAnimation(SkeletalMesh->Skeleton, AnimationIndex, SkeletalMesh, SkeletalAnimationConfig);
+#endif
 }
 
 const FBox& FglTFRuntimeSkeletalMeshContext::GetBoneBox(const int32 BoneIndex)
