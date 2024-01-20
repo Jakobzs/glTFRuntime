@@ -1793,22 +1793,6 @@ UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeletalMesh* Skel
 #endif
 }
 
-TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
-{
-	TMap<FString, UAnimSequence*> SkeletalAnimationsMap;
-
-	if (!SkeletalMesh)
-	{
-		return SkeletalAnimationsMap;
-	}
-
-#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
-	return LoadNodeSkeletonAnimationsMap(SkeletalMesh->GetSkeleton(), NodeIndex, SkeletalMesh, SkeletalAnimationConfig);
-#else
-	return LoadNodeSkeletonAnimationsMap(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
-#endif
-}
-
 UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationFromTracksAndMorphTargets(USkeletalMesh* SkeletalMesh, TMap<FString, FRawAnimSequenceTrack>& Tracks, TMap<FName, TArray<TPair<float, float>>>& MorphTargetCurves, const float Duration, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
@@ -2009,6 +1993,22 @@ TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletonAnimationsMap(
 	}
 
 	return SkeletalAnimationsMap;
+}
+
+TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	TMap<FString, UAnimSequence*> SkeletalAnimationsMap;
+
+	if (!SkeletalMesh)
+	{
+		return SkeletalAnimationsMap;
+	}
+
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+	return LoadNodeSkeletonAnimationsMap(SkeletalMesh->GetSkeleton(), NodeIndex, SkeletalMesh, SkeletalAnimationConfig);
+#else
+	return LoadNodeSkeletonAnimationsMap(SkeletalMesh->Skeleton, AnimationName, SkeletalMesh, SkeletalAnimationConfig);
+#endif
 }
 
 UAnimSequence* FglTFRuntimeParser::LoadSkeletonAnimationFromTracksAndMorphTargets(USkeleton* Skeleton, USkeletalMesh* PreviewSkeletalMesh, TMap<FString, FRawAnimSequenceTrack>& Tracks, TMap<FName, TArray<TPair<float, float>>>& MorphTargetCurves, const float Duration, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
