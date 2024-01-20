@@ -8,6 +8,7 @@
 #include "Animation/PoseAsset.h"
 #include "Animation/Skeleton.h"
 #include "Async/Async.h"
+#include "Async/ParallelFor.h"
 #include "Dom/JsonValue.h"
 #include "Dom/JsonObject.h"
 #include "Engine/DataAsset.h"
@@ -44,7 +45,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FglTFRuntimeOnSkeletalMeshCreated, U
 /*
 * Credits for giving me the idea for the blob structure
 * definitely go to Benjamin MICHEL (SBRK)
-* 
+*
 */
 struct FglTFRuntimeBlob
 {
@@ -408,7 +409,7 @@ struct FglTFRuntimeImagesConfig
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	TEnumAsByte<TextureCompressionSettings> Compression;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	TEnumAsByte<TextureGroup> Group;
 
@@ -540,6 +541,9 @@ struct FglTFRuntimeMaterialsConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	bool bLoadMipMaps;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	UMaterialInterface* ForceMaterial;
+
 	FglTFRuntimeMaterialsConfig()
 	{
 		CacheMode = EglTFRuntimeCacheMode::ReadWrite;
@@ -551,6 +555,7 @@ struct FglTFRuntimeMaterialsConfig
 		bSkipLoad = false;
 		VertexColorOnlyMaterial = nullptr;
 		bLoadMipMaps = false;
+		ForceMaterial = nullptr;
 	}
 };
 
@@ -797,7 +802,7 @@ struct FglTFRuntimeSkeletonConfig
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	bool bAddRootNodeIfMissing;
-	
+
 	FglTFRuntimeSkeletonConfig()
 	{
 		CacheMode = EglTFRuntimeCacheMode::ReadWrite;
@@ -1284,7 +1289,7 @@ struct FglTFRuntimeUInt16Vector4
 		W = 0;
 	}
 
-	uint16& operator[](int32 Index)
+	const uint16& operator[](const int32 Index) const
 	{
 		check(Index >= 0 && Index < 4);
 		switch (Index)
@@ -1299,7 +1304,23 @@ struct FglTFRuntimeUInt16Vector4
 		default:
 			return W;
 		}
-		;
+	}
+
+	uint16& operator[](const int32 Index)
+	{
+		check(Index >= 0 && Index < 4);
+		switch (Index)
+		{
+		case 0:
+			return X;
+		case 1:
+			return Y;
+		case 2:
+			return Z;
+		case 3:
+		default:
+			return W;
+		}
 	}
 };
 
@@ -1367,7 +1388,7 @@ struct FglTFRuntimeSkeletalMeshContext : public FGCObject
 		// a generic plugin for saving transient assets will be a better (and saner) approach
 		if (!InSkeletalMeshConfig.SaveToPackage.IsEmpty())
 		{
-			if (FindPackage(nullptr, *InSkeletalMeshConfig.SaveToPackage) || LoadPackage(nullptr, *InSkeletalMeshConfig.SaveToPackage, RF_Public|RF_Standalone))
+			if (FindPackage(nullptr, *InSkeletalMeshConfig.SaveToPackage) || LoadPackage(nullptr, *InSkeletalMeshConfig.SaveToPackage, RF_Public | RF_Standalone))
 			{
 				UE_LOG(LogGLTFRuntime, Error, TEXT("UPackage %s already exists. Falling back to Transient."), *InSkeletalMeshConfig.SaveToPackage);
 				Outer = GetTransientPackage();
@@ -1547,6 +1568,8 @@ struct FglTFRuntimeMeshLOD
 	void Empty()
 	{
 		Primitives.Empty();
+		AdditionalTransforms.Empty();
+		Skeleton.Empty();
 	}
 };
 
@@ -1609,7 +1632,7 @@ struct FglTFRuntimeMipMap
 		PixelFormat = EPixelFormat::PF_B8G8R8A8;
 	}
 
-	FglTFRuntimeMipMap(const int32 InTextureIndex, const EPixelFormat InPixelFormat, const int32 InWidth, const int32 InHeight) : 
+	FglTFRuntimeMipMap(const int32 InTextureIndex, const EPixelFormat InPixelFormat, const int32 InWidth, const int32 InHeight) :
 		TextureIndex(InTextureIndex),
 		Width(InWidth),
 		Height(InHeight),
@@ -2016,6 +2039,8 @@ public:
 	UAnimSequence* LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 	TMap<FString, UAnimSequence*> LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, USkeletalMesh* PreviewSkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
 
+	UAnimSequence* LoadSkeletalAnimationFromTracksAndMorphTargets(USkeletalMesh* SkeletalMesh, TMap<FString, FRawAnimSequenceTrack>& Tracks, TMap<FName, TArray<TPair<float, float>>>& MorphTargetCurves, const float Duration, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig);
+
 	void LoadSkeletalMeshAsync(const int32 MeshIndex, const int32 SkinIndex, const FglTFRuntimeSkeletalMeshAsync& AsyncCallback, const FglTFRuntimeSkeletalMeshConfig& SkeletalMeshConfig);
 	void LoadStaticMeshAsync(const int32 MeshIndex, const FglTFRuntimeStaticMeshAsync& AsyncCallback, const FglTFRuntimeStaticMeshConfig& StaticMeshConfig);
 
@@ -2115,7 +2140,7 @@ public:
 	bool LoadImageFromBlob(const TArray64<uint8>& Blob, TSharedRef<FJsonObject> JsonImageObject, TArray64<uint8>& UncompressedBytes, int32& Width, int32& Height, EPixelFormat& PixelFormat, const FglTFRuntimeImagesConfig& ImagesConfig);
 	UTexture2D* BuildTexture(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
 	UTextureCube* BuildTextureCube(UObject* Outer, const TArray<FglTFRuntimeMipMap>& MipsXP, const TArray<FglTFRuntimeMipMap>& MipsXN, const TArray<FglTFRuntimeMipMap>& MipsYP, const TArray<FglTFRuntimeMipMap>& MipsYN, const TArray<FglTFRuntimeMipMap>& MipsZP, const TArray<FglTFRuntimeMipMap>& MipsZN, const bool bAutoRotate, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
-	UTexture2DArray* BuildTextureArray(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips,const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
+	UTexture2DArray* BuildTextureArray(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
 	UVolumeTexture* BuildVolumeTexture(UObject* Outer, const TArray<FglTFRuntimeMipMap>& Mips, const int32 TileZ, const FglTFRuntimeImagesConfig& ImagesConfig, const FglTFRuntimeTextureSampler& Sampler);
 
 
@@ -2155,7 +2180,7 @@ public:
 	static FglTFRuntimeOnPreCreatedSkeletalMesh OnPreCreatedSkeletalMesh;
 
 	const FglTFRuntimeBlob* GetAdditionalBufferView(const int64 Index, const FString& Name) const;
-	
+
 	void AddAdditionalBufferView(const int64 Index, const FString& Name, const FglTFRuntimeBlob& Blob);
 
 	template<typename T>
@@ -2339,9 +2364,10 @@ protected:
 
 public:
 
-	FVector TransformVector(FVector Vector) const;
-	FVector TransformPosition(FVector Position) const;
-	FVector4 TransformVector4(FVector4 Vector) const;
+	FVector TransformVector(const FVector Vector) const;
+	FVector TransformPosition(const FVector Position) const;
+	FVector4 TransformVector4(const FVector4 Vector) const;
+	FTransform TransformTransform(const FTransform& Transform) const;
 
 	const TArray64<uint8>& GetBlob() const { return AsBlob; }
 	TArray64<uint8>& GetBlob() { return AsBlob; }
@@ -2386,65 +2412,83 @@ public:
 			*ComponentTypePtr = ComponentType;
 		}
 
-		Data.AddUninitialized(Count);
-		for (int64 ElementIndex = 0; ElementIndex < Count; ElementIndex++)
-		{
-			int64 Index = ElementIndex * Stride;
-			T Value;
-			// FLOAT
-			if (ComponentType == 5126)
+		auto ComponentFloat = [](const int64 Elements, const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				float* Ptr = (float*)&(Blob.Data[Index]);
 				for (int32 i = 0; i < Elements; i++)
 				{
 					Value[i] = Ptr[i];
 				}
-			}
-			// BYTE
-			else if (ComponentType == 5120)
+			};
+
+		auto ComponentByte = [](const int64 Elements, const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				int8* Ptr = (int8*)&(Blob.Data[Index]);
 				for (int32 i = 0; i < Elements; i++)
 				{
 					Value[i] = bNormalized ? FMath::Max(((float)Ptr[i]) / 127.f, -1.f) : Ptr[i];
 				}
+			};
 
-			}
-			// UNSIGNED_BYTE
-			else if (ComponentType == 5121)
+		auto ComponentUnsignedByte = [](const int64 Elements, const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				uint8* Ptr = (uint8*)&(Blob.Data[Index]);
 				for (int32 i = 0; i < Elements; i++)
 				{
 					Value[i] = bNormalized ? ((float)Ptr[i]) / 255.f : Ptr[i];
 				}
-			}
-			// SHORT
-			else if (ComponentType == 5122)
+			};
+
+		auto ComponentShort = [](const int64 Elements, const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				int16* Ptr = (int16*)&(Blob.Data[Index]);
 				for (int32 i = 0; i < Elements; i++)
 				{
 					Value[i] = bNormalized ? FMath::Max(((float)Ptr[i]) / 32767.f, -1.f) : Ptr[i];
 				}
-			}
-			// UNSIGNED_SHORT
-			else if (ComponentType == 5123)
+			};
+
+		auto ComponentUnsignedShort = [](const int64 Elements, const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				uint16* Ptr = (uint16*)&(Blob.Data[Index]);
 				for (int32 i = 0; i < Elements; i++)
 				{
 					Value[i] = bNormalized ? ((float)Ptr[i]) / 65535.f : Ptr[i];
 				}
-			}
-			else
-			{
-				UE_LOG(LogGLTFRuntime, Error, TEXT("Unsupported type %d"), ComponentType);
-				return false;
-			}
+			};
 
-			Data[ElementIndex] = Filter(Value);
+		TFunction<void(const int64 Elements, const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)> ComponentFunction = nullptr;
+
+		switch (ComponentType)
+		{
+		case(5126):// FLOAT
+			ComponentFunction = ComponentFloat;
+			break;
+		case(5120):// BYTE
+			ComponentFunction = ComponentByte;
+			break;
+		case(5121):// UNSIGNED_BYTE
+			ComponentFunction = ComponentUnsignedByte;
+			break;
+		case(5122):// SHORT
+			ComponentFunction = ComponentShort;
+			break;
+		case(5123):// UNSIGNED_SHORT
+			ComponentFunction = ComponentUnsignedShort;
+			break;
+		default:
+			UE_LOG(LogGLTFRuntime, Error, TEXT("Unsupported type %d"), ComponentType);
+			return false;
 		}
+
+		Data.AddUninitialized(Count);
+		ParallelFor(Count, [&](const int64 ElementIndex)
+			{
+				int64 Index = ElementIndex * Stride;
+				T Value;
+				ComponentFunction(Elements, Index, Blob, Value, bNormalized);
+				Data[ElementIndex] = Filter(Value);
+			});
 
 		return true;
 	}
@@ -2482,49 +2526,68 @@ public:
 			*ComponentTypePtr = ComponentType;
 		}
 
-		Data.AddUninitialized(Count);
-		for (int64 ElementIndex = 0; ElementIndex < Count; ElementIndex++)
-		{
-			int64 Index = ElementIndex * Stride;
-			T Value;
-			// FLOAT
-			if (ComponentType == 5126)
+		auto ComponentFloat = [](const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				float* Ptr = (float*)&(Blob.Data[Index]);
 				Value = *Ptr;
-			}
-			// BYTE
-			else if (ComponentType == 5120)
+			};
+
+		auto ComponentByte = [](const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				int8* Ptr = (int8*)&(Blob.Data[Index]);
 				Value = bNormalized ? FMath::Max(((float)(*Ptr)) / 127.f, -1.f) : *Ptr;
-			}
-			// UNSIGNED_BYTE
-			else if (ComponentType == 5121)
+			};
+
+		auto ComponentUnsignedByte = [](const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				uint8* Ptr = (uint8*)&(Blob.Data[Index]);
 				Value = bNormalized ? ((float)(*Ptr)) / 255.f : *Ptr;
-			}
-			// SHORT
-			else if (ComponentType == 5122)
+			};
+
+		auto ComponentShort = [](const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				int16* Ptr = (int16*)&(Blob.Data[Index]);
 				Value = bNormalized ? FMath::Max(((float)(*Ptr)) / 32767.f, -1.f) : *Ptr;
-			}
-			// UNSIGNED_SHORT
-			else if (ComponentType == 5123)
+			};
+
+		auto ComponentUnsignedShort = [](const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)
 			{
 				uint16* Ptr = (uint16*)&(Blob.Data[Index]);
 				Value = bNormalized ? ((float)(*Ptr)) / 65535.f : *Ptr;
-			}
-			else
-			{
-				UE_LOG(LogGLTFRuntime, Error, TEXT("Unsupported type %d"), ComponentType);
-				return false;
-			}
+			};
 
-			Data[ElementIndex] = Filter(Value);
+		TFunction<void(const int64 Index, const FglTFRuntimeBlob& Blob, T& Value, const bool bNormalized)> ComponentFunction = nullptr;
+
+		switch (ComponentType)
+		{
+		case(5126):// FLOAT
+			ComponentFunction = ComponentFloat;
+			break;
+		case(5120):// BYTE
+			ComponentFunction = ComponentByte;
+			break;
+		case(5121):// UNSIGNED_BYTE
+			ComponentFunction = ComponentUnsignedByte;
+			break;
+		case(5122):// SHORT
+			ComponentFunction = ComponentShort;
+			break;
+		case(5123):// UNSIGNED_SHORT
+			ComponentFunction = ComponentUnsignedShort;
+			break;
+		default:
+			UE_LOG(LogGLTFRuntime, Error, TEXT("Unsupported type %d"), ComponentType);
+			return false;
 		}
+
+		Data.AddUninitialized(Count);
+		ParallelFor(Count, [&](const int64 ElementIndex)
+			{
+				int64 Index = ElementIndex * Stride;
+				T Value;
+				ComponentFunction(Index, Blob, Value, bNormalized);
+				Data[ElementIndex] = Filter(Value);
+			});
 
 		return true;
 	}
