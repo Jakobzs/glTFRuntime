@@ -727,6 +727,38 @@ UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, con
 	return LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
 }
 
+UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+	SkeletalMesh->SetSkeleton(Skeleton);
+
+	return LoadSkeletalAnimationByName(SkeletalMesh, AnimationName, SkeletalAnimationConfig);
+}
+
+UAnimSequence* UglTFRuntimeAsset::LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+	SkeletalMesh->SetSkeleton(Skeleton);
+
+	return LoadNodeSkeletalAnimation(SkeletalMesh, NodeIndex, SkeletalAnimationConfig);
+}
+
+TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+	SkeletalMesh->SetSkeleton(Skeleton);
+
+	return LoadNodeSkeletalAnimationsMap(SkeletalMesh, NodeIndex, SkeletalAnimationConfig);
+}
+
+UAnimMontage* UglTFRuntimeAsset::LoadSkeletonAnimationAsMontage(USkeleton* Skeleton, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+	SkeletalMesh->SetSkeleton(Skeleton);
+
+	return LoadSkeletalAnimationAsMontage(SkeletalMesh, AnimationIndex, SlotNodeName, SkeletalAnimationConfig);
+}
+
 UglTFRuntimeAnimationCurve* UglTFRuntimeAsset::LoadNodeAnimationCurve(const int32 NodeIndex)
 {
 	GLTF_CHECK_PARSER(nullptr);
