@@ -719,6 +719,14 @@ UAnimMontage* UglTFRuntimeAsset::LoadSkeletalAnimationAsMontage(USkeletalMesh* S
 	return AnimMontage;
 }
 
+UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	//auto aweaer = NewObject<UAnimSequence>(this);
+	//LoadSkeletalAnimation()
+
+	return nullptr;
+}
+
 UglTFRuntimeAnimationCurve* UglTFRuntimeAsset::LoadNodeAnimationCurve(const int32 NodeIndex)
 {
 	GLTF_CHECK_PARSER(nullptr);
