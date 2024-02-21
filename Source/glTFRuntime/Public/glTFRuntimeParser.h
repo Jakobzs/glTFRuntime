@@ -503,8 +503,11 @@ enum class EglTFRuntimePointsTriangulationMode : uint8
 UENUM()
 enum class EglTFRuntimeLinesTriangulationMode : uint8
 {
+	Rectangle,
 	RectangleWithXYInUV1ZWInUV2,
+	TriangularPrism,
 	TriangularPrismWithXYInUV1ZWInUV2,
+	OpenedTriangularPrism,
 	OpenedTriangularPrismWithXYInUV1ZWInUV2,
 	Custom
 };
@@ -616,11 +619,11 @@ struct FglTFRuntimeMaterialsConfig
 		VertexColorOnlyMaterial = nullptr;
 		bLoadMipMaps = false;
 		ForceMaterial = nullptr;
-		bSkipPoints = false;
+		bSkipPoints = true;
 		PointsTriangulationMode = EglTFRuntimePointsTriangulationMode::OpenedTetrahedronWithXYInUV1ZWInUV2;
 		PointsBaseMaterial = nullptr;
 		PointsScaleFactor = 1;
-		bSkipLines = false;
+		bSkipLines = true;
 		LinesTriangulationMode = EglTFRuntimeLinesTriangulationMode::OpenedTriangularPrismWithXYInUV1ZWInUV2;
 		LinesBaseMaterial = nullptr;
 		LinesScaleFactor = 1;
@@ -2163,6 +2166,8 @@ public:
 
 	void AddError(const FString& ErrorContext, const FString& ErrorMessage);
 	void ClearErrors();
+	bool HasErrors() const;
+	const TArray<FString>& GetErrors() const;
 
 	bool NodeIsBone(const int32 NodeIndex);
 
@@ -2405,8 +2410,10 @@ public:
 
 	FString ToJsonString() const;
 
-protected:
 	bool FillJsonMatrix(const TArray<TSharedPtr<FJsonValue>>* JsonMatrixValues, FMatrix& Matrix);
+	FTransform RawMatrixToRebasedTransform(const FMatrix& Matrix) const;
+
+protected:
 
 	float FindBestFrames(const TArray<float>& FramesTimes, float WantedTime, int32& FirstIndex, int32& SecondIndex);
 
