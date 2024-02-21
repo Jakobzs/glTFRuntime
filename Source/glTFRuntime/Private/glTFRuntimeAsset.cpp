@@ -722,7 +722,11 @@ UAnimMontage* UglTFRuntimeAsset::LoadSkeletalAnimationAsMontage(USkeletalMesh* S
 UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	SkeletalMesh->SetSkeleton(Skeleton);
+#else
+	SkeletalMesh->Skeleton = Skeleton;
+#endif
 
 	return LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
 }
@@ -730,7 +734,11 @@ UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, con
 UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	SkeletalMesh->SetSkeleton(Skeleton);
+#else
+	SkeletalMesh->Skeleton = Skeleton;
+#endif
 
 	return LoadSkeletalAnimationByName(SkeletalMesh, AnimationName, SkeletalAnimationConfig);
 }
@@ -738,7 +746,11 @@ UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimationByName(USkeleton* Skeleto
 UAnimSequence* UglTFRuntimeAsset::LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	SkeletalMesh->SetSkeleton(Skeleton);
+#else
+	SkeletalMesh->Skeleton = Skeleton;
+#endif
 
 	return LoadNodeSkeletalAnimation(SkeletalMesh, NodeIndex, SkeletalAnimationConfig);
 }
@@ -746,7 +758,11 @@ UAnimSequence* UglTFRuntimeAsset::LoadNodeSkeletonAnimation(USkeleton* Skeleton,
 TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	SkeletalMesh->SetSkeleton(Skeleton);
+#else
+	SkeletalMesh->Skeleton = Skeleton;
+#endif
 
 	return LoadNodeSkeletalAnimationsMap(SkeletalMesh, NodeIndex, SkeletalAnimationConfig);
 }
@@ -754,7 +770,11 @@ TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(U
 UAnimMontage* UglTFRuntimeAsset::LoadSkeletonAnimationAsMontage(USkeleton* Skeleton, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
 	SkeletalMesh->SetSkeleton(Skeleton);
+#else
+	SkeletalMesh->Skeleton = Skeleton;
+#endif
 
 	return LoadSkeletalAnimationAsMontage(SkeletalMesh, AnimationIndex, SlotNodeName, SkeletalAnimationConfig);
 }
