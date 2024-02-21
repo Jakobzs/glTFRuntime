@@ -632,52 +632,6 @@ UAnimSequence* UglTFRuntimeAsset::LoadSkeletalAnimationByName(USkeletalMesh* Ske
 	return Parser->LoadSkeletalAnimationByName(SkeletalMesh, AnimationName, SkeletalAnimationConfig);
 }
 
-UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
-{
-	GLTF_CHECK_PARSER(nullptr);
-
-	return Parser->LoadSkeletonAnimation(Skeleton, AnimationIndex, nullptr, SkeletalAnimationConfig);
-}
-
-UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimationByName(USkeleton* Skeleton, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
-{
-	GLTF_CHECK_PARSER(nullptr);
-
-	return Parser->LoadSkeletonAnimationByName(Skeleton, AnimationName, nullptr, SkeletalAnimationConfig);
-}
-
-UAnimSequence* UglTFRuntimeAsset::LoadNodeSkeletonAnimation(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
-{
-	GLTF_CHECK_PARSER(nullptr);
-
-	return Parser->LoadNodeSkeletonAnimation(Skeleton, NodeIndex, nullptr, SkeletalAnimationConfig);
-}
-
-TMap<FString, UAnimSequence*> UglTFRuntimeAsset::LoadNodeSkeletonAnimationsMap(USkeleton* Skeleton, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
-{
-	TMap<FString, UAnimSequence*> EmptyMap;
-	GLTF_CHECK_PARSER(EmptyMap);
-
-	return Parser->LoadNodeSkeletonAnimationsMap(Skeleton, NodeIndex, nullptr, SkeletalAnimationConfig);
-}
-
-UAnimMontage* UglTFRuntimeAsset::LoadSkeletonAnimationAsMontage(USkeleton* Skeleton, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& AnimationConfig)
-{
-	UAnimSequence* AnimSequence = LoadSkeletonAnimation(Skeleton, AnimationIndex, AnimationConfig);
-	if (!AnimSequence)
-	{
-		return nullptr;
-	}
-
-	UAnimMontage* AnimMontage = UAnimMontage::CreateSlotAnimationAsDynamicMontage(AnimSequence, FName(SlotNodeName), 0, 0, 1);
-	if (!AnimMontage)
-	{
-		return nullptr;
-	}
-
-	return AnimMontage;
-}
-
 bool UglTFRuntimeAsset::BuildTransformFromNodeBackward(const int32 NodeIndex, FTransform& Transform)
 {
 	GLTF_CHECK_PARSER(false);
