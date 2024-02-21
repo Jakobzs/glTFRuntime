@@ -721,10 +721,10 @@ UAnimMontage* UglTFRuntimeAsset::LoadSkeletalAnimationAsMontage(USkeletalMesh* S
 
 UAnimSequence* UglTFRuntimeAsset::LoadSkeletonAnimation(USkeleton* Skeleton, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
-	//auto aweaer = NewObject<UAnimSequence>(this);
-	//LoadSkeletalAnimation()
+	USkeletalMesh* SkeletalMesh = NewObject<USkeletalMesh>(GetTransientPackage(), NAME_None, RF_Public);
+	SkeletalMesh->SetSkeleton(Skeleton);
 
-	return nullptr;
+	return LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
 }
 
 UglTFRuntimeAnimationCurve* UglTFRuntimeAsset::LoadNodeAnimationCurve(const int32 NodeIndex)
