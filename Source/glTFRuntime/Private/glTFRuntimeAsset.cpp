@@ -618,18 +618,18 @@ USkeleton* UglTFRuntimeAsset::LoadSkeletonFromNodeTreeByName(const FString& Node
 	return Parser->LoadSkeletonFromNode(Node, SkeletonConfig);
 }
 
-UAnimSequence* UglTFRuntimeAsset::LoadSkeletalAnimation(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* UglTFRuntimeAsset::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	GLTF_CHECK_PARSER(nullptr);
 
-	return Parser->LoadSkeletalAnimation(Skeleton, SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
+	return Parser->LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
 }
 
-UAnimSequence* UglTFRuntimeAsset::LoadSkeletalAnimationByName(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* UglTFRuntimeAsset::LoadSkeletalAnimationByName(USkeletalMesh* SkeletalMesh, const FString& AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	GLTF_CHECK_PARSER(nullptr);
 
-	return Parser->LoadSkeletalAnimationByName(Skeleton, SkeletalMesh, AnimationName, SkeletalAnimationConfig);
+	return Parser->LoadSkeletalAnimationByName(SkeletalMesh, AnimationName, SkeletalAnimationConfig);
 }
 
 bool UglTFRuntimeAsset::BuildTransformFromNodeBackward(const int32 NodeIndex, FTransform& Transform)
@@ -700,9 +700,9 @@ bool UglTFRuntimeAsset::BuildTransformFromNodeForward(const int32 NodeIndex, con
 	return true;
 }
 
-UAnimMontage* UglTFRuntimeAsset::LoadSkeletalAnimationAsMontage(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& AnimationConfig)
+UAnimMontage* UglTFRuntimeAsset::LoadSkeletalAnimationAsMontage(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FString& SlotNodeName, const FglTFRuntimeSkeletalAnimationConfig& AnimationConfig)
 {
-	UAnimSequence* AnimSequence = LoadSkeletalAnimation(Skeleton, SkeletalMesh, AnimationIndex, AnimationConfig);
+	UAnimSequence* AnimSequence = LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, AnimationConfig);
 	if (!AnimSequence)
 	{
 		return nullptr;

@@ -1735,7 +1735,7 @@ void FglTFRuntimeParser::LoadSkeletalMeshRecursiveAsync(const FString& NodeName,
 		});
 }
 
-UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const FString AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeletalMesh* SkeletalMesh, const FString AnimationName, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
 	{
@@ -1762,7 +1762,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeleton* Skelet
 		{
 			if (JsonAnimationName == AnimationName)
 			{
-				return LoadSkeletalAnimation(Skeleton, SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
+				return LoadSkeletalAnimation(SkeletalMesh, AnimationIndex, SkeletalAnimationConfig);
 			}
 		}
 	}
@@ -1770,7 +1770,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationByName(USkeleton* Skelet
 	return nullptr;
 }
 
-UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
 	{
@@ -1845,14 +1845,14 @@ UAnimSequence* FglTFRuntimeParser::LoadNodeSkeletalAnimation(USkeleton* Skeleton
 		{
 			// this is very inefficient as we parse the tracks twice
 			// TODO: refactor it
-			return LoadSkeletalAnimation(Skeleton, SkeletalMesh, JsonAnimationIndex, SkeletalAnimationConfig);
+			return LoadSkeletalAnimation(SkeletalMesh, JsonAnimationIndex, SkeletalAnimationConfig);
 		}
 	}
 
 	return nullptr;
 }
 
-TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+TMap<FString, UAnimSequence*> FglTFRuntimeParser::LoadNodeSkeletalAnimationsMap(USkeletalMesh* SkeletalMesh, const int32 NodeIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	TMap<FString, UAnimSequence*> SkeletalAnimationsMap;
 
@@ -2369,7 +2369,7 @@ UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimationFromTracksAndMorphTarget
 	return AnimSequence;
 }
 
-UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeleton* Skeleton, USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* FglTFRuntimeParser::LoadSkeletalAnimation(USkeletalMesh* SkeletalMesh, const int32 AnimationIndex, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
 {
 	if (!SkeletalMesh)
 	{
